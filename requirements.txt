@@ -1,0 +1,5 @@
+# .env loading (see .env.example)
+python-dotenv>=1.0
+
+# Add your HTTP client for posting readings when implementing, e.g.:
+# requests>=2.32

@@ -36,14 +36,27 @@ Extra fields are rejected — keep payloads to exactly these two keys.
 hand. The server-side contract above is live and proven (ingest tested
 end-to-end); only the inverter-reading + posting logic needs filling in.
 
-## Planned configuration (.env, mirrors powerpal-bridge)
+## Configuration (.env)
+
+```bash
+cp .env.example .env
+# edit with your values
+```
+
+`python-dotenv` (the one entry in `requirements.txt`) loads `.env` at
+startup; real environment variables still take precedence.
 
 | Variable | Example | Purpose |
 |----------|---------|---------|
 | `FRONIUS_HOST` | `192.168.68.x` | Fronius inverter IP on the home LAN |
 | `INGEST_URL` | `http://192.168.68.141:8000/api/v1/solar/readings` | Solar ingest endpoint |
-| `INGEST_API_KEY` | — | The server's ingest API key (same key as powerpal-bridge) |
+| `INGEST_API_KEY` | *(paste the real key)* | The server's ingest API key (same key as powerpal-bridge) |
 | `POLL_SECONDS` | `60` | Polling cadence |
+
+⚠️ The `INGEST_API_KEY` in `.env.example` is a **placeholder** — the real
+key lives in the server's `.env` on the laptop. Copying the example
+without replacing it caused a 401 debugging session on the Powerpal side
+already; don't repeat it here.
 
 ## Fronius Solar API hints
 
