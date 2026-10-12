@@ -49,7 +49,7 @@ startup; real environment variables still take precedence.
 
 | Variable | Example | Purpose |
 |----------|---------|---------|
-| `FRONIUS_HOST` | `192.168.68.x` | Fronius inverter IP on the home LAN |
+| `FRONIUS_URL` | `http://192.168.68.107/solar_api/v1/GetPowerFlowRealtimeData.fcgi` | Fronius inverter URL on the home LAN |
 | `INGEST_URL` | `http://192.168.68.141:8000/api/v1/solar/readings` | Solar ingest endpoint |
 | `INGEST_API_KEY` | *(paste the real key)* | The server's ingest API key (same key as powerpal-bridge) |
 | `POLL_SECONDS` | `60` | Polling cadence |
