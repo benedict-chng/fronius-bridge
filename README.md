@@ -32,9 +32,10 @@ Extra fields are rejected — keep payloads to exactly these two keys.
 
 ## Status
 
-`fronius-bridge.py` is intentionally empty for now — being implemented by
-hand. The server-side contract above is live and proven (ingest tested
-end-to-end); only the inverter-reading + posting logic needs filling in.
+`fronius-bridge.py` implements the full loop: polls the Fronius Solar API
+for current output (watts), and POSTs one reading per `POLL_SECONDS` to
+home-energy-server's solar ingest endpoint using aiohttp. Failed posts
+queue in memory (~12 h) and retry; the server deduplicates by time.
 
 ## Configuration (.env)
 
@@ -57,6 +58,37 @@ startup; real environment variables still take precedence.
 key lives in the server's `.env` on the laptop. Copying the example
 without replacing it caused a 401 debugging session on the Powerpal side
 already; don't repeat it here.
+
+## Run
+
+```bash
+cp .env.example .env        # fill in FRONIUS_HOST + INGEST_API_KEY
+python3 -m venv .venv
+.venv/bin/pip install -r requirements.txt
+.venv/bin/python fronius-bridge.py
+```
+
+Readings print as they're posted; Ctrl+C stops cleanly.
+
+### systemd
+
+```ini
+# /etc/systemd/system/fronius-bridge.service
+[Unit]
+Description=Fronius solar bridge -> home-energy-server
+After=network.target
+
+[Service]
+User=pi
+WorkingDirectory=/home/pi/fronius-bridge
+EnvironmentFile=/home/pi/fronius-bridge/.env
+ExecStart=/home/pi/fronius-bridge/.venv/bin/python fronius-bridge.py
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
+```
 
 ## Fronius Solar API hints
 
