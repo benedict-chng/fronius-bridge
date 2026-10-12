@@ -12,12 +12,10 @@ load_dotenv()  # reads .env from the working directory (see .env.example)
 
 
 # -- Config -- from .env / environment (see .env.example) -----------------------
-FRONIUS_HOST   = os.environ.get("FRONIUS_HOST", "192.168.68.x")
+FRONIUS_URL    = os.environ.get("FRONIUS_URL", "http://192.168.68.107/solar_api/v1/GetPowerFlowRealtimeData.fcgi")
 INGEST_URL     = os.environ.get("INGEST_URL", "http://192.168.68.141:8000/api/v1/solar/readings")
 INGEST_API_KEY = os.environ.get("INGEST_API_KEY", "")
 POLL_SECONDS   = int(os.environ.get("POLL_SECONDS", "60"))
-
-FRONIUS_URL = f"http://{FRONIUS_HOST}/solar_api/v1/GetPowerFlowRealtimeData.fjson"
 
 
 async def retrieve_solar_output(url: str) -> int:
