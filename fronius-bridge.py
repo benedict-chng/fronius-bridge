@@ -121,7 +121,7 @@ async def main_loop() -> None:
 
 if __name__ == "__main__":
     ingest_state = INGEST_URL if INGEST_API_KEY else "disabled (no INGEST_API_KEY)"
-    print(f"fronius-bridge: host={FRONIUS_HOST} poll={POLL_SECONDS}s ingest={ingest_state}")
+    print(f"fronius-bridge: fronius_url={FRONIUS_URL} poll={POLL_SECONDS}s ingest={ingest_state}")
     try:
         asyncio.run(main_loop())
     except KeyboardInterrupt:
