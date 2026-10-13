@@ -1,6 +1,8 @@
 from typing import Any
 import aiohttp
 import asyncio
+import logging
+from logging.handlers import TimedRotatingFileHandler
 import json
 import os
 import signal
@@ -31,14 +33,29 @@ async def retrieve_solar_output(url: str) -> int:
                     power_output: int = result["Body"]["Data"]["Inverters"]["1"]["P"]
                     return power_output
                 else:
+                    logger.warning(f"Unexpected response from inverter: HTTP {status}")
                     return 0
     except asyncio.TimeoutError as e:
-        print(f"Timeout occurred while fetching the URL. {e}")
+        logger.error(f"Timeout occurred while fetching the URL: {e}")
         return 0
     except aiohttp.ClientError as e:
-        print(f"An error occurred: {e}")
+        logger.error(f"Error fetching inverter data: {e}")
         return 0
 
+
+def setup_logger():
+    logger = logging.getLogger("my_logger")
+    logger.setLevel(logging.INFO)
+    handler = TimedRotatingFileHandler(
+        "fronius-bridge.log", when="midnight", backupCount=7, encoding="utf-8"
+    )
+    formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+    logger.propagate = False
+    return logger
+
+logger = setup_logger()
 
 # -- Ingest POST (home-energy-server) --------------------------------------------
 _outbox: list[dict] = []
@@ -58,10 +75,10 @@ async def post_reading(session: aiohttp.ClientSession, payload: dict) -> bool:
             ok = 200 <= resp.status < 300
             if not ok:
                 body = await resp.text()
-                print(f"  [INGEST] HTTP {resp.status}: {body[:120]}")
+                logger.error(f"[INGEST] HTTP {resp.status}: {body[:120]}")
             return ok
     except aiohttp.ClientError as e:
-        print(f"  [INGEST] server unreachable: {e}")
+        logger.error(f"[INGEST] server unreachable: {e}")
         return False
 
 
@@ -74,8 +91,8 @@ async def send_reading(session: aiohttp.ClientSession, payload: dict) -> None:
     _outbox.append(payload)
     if len(_outbox) > 720:  # ~12 h of minute data, then drop the oldest
         _outbox.pop(0)
-        print("  [INGEST] outbox overflow, dropped oldest reading")
-    print(f"  [INGEST] queued for retry ({len(_outbox)} in outbox)")
+        logger.warning("[INGEST] outbox overflow, dropped oldest reading")
+    logger.warning(f"[INGEST] queued for retry ({len(_outbox)} in outbox)")
 
 
 async def flush_outbox(session: aiohttp.ClientSession) -> None:
@@ -86,7 +103,7 @@ async def flush_outbox(session: aiohttp.ClientSession) -> None:
         _outbox.pop(0)
         flushed = True
     if flushed:
-        print("  [INGEST] outbox flushed")
+        logger.info("[INGEST] outbox flushed")
 
 
 # -- Main loop --------------------------------------------------------------------
@@ -105,23 +122,23 @@ async def main_loop() -> None:
                 watts = await retrieve_solar_output(FRONIUS_URL)
             except Exception as e:
                 # e.g. empty Inverters dict from the inverter (no data yet)
-                print(f"  [POLL] error reading inverter: {e}")
+                logger.error(f"[POLL] error reading inverter: {e}")
                 watts = 0
 
             payload = solar_payload(watts)
-            print(f"  [POLL] {payload['time']}  {watts} W")
+            logger.info(f"[POLL] {payload['time']}  {watts} W")
             await send_reading(session, payload)
 
             try:
                 await asyncio.wait_for(stop.wait(), timeout=POLL_SECONDS)
             except asyncio.TimeoutError:
                 pass
-    print("fronius-bridge stopped")
+    logger.info("fronius-bridge stopped")
 
 
 if __name__ == "__main__":
     ingest_state = INGEST_URL if INGEST_API_KEY else "disabled (no INGEST_API_KEY)"
-    print(f"fronius-bridge: fronius_url={FRONIUS_URL} poll={POLL_SECONDS}s ingest={ingest_state}")
+    logger.info(f"fronius-bridge: fronius_url={FRONIUS_URL} poll={POLL_SECONDS}s ingest={ingest_state}")
     try:
         asyncio.run(main_loop())
     except KeyboardInterrupt:
